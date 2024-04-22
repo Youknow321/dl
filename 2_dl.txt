@@ -1,0 +1,115 @@
+import tensorflow as tf
+from sklearn import metrics
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+
+
+# Load Fashion MNIST dataset
+(trainX, trainY), (testX, testY) = tf.keras.datasets.fashion_mnist.load_data()
+print(trainX.shape)
+print(trainY.shape)
+print(testX.shape)
+print(testY.shape)
+
+
+
+
+# Preprocessing
+# Reshape the data
+trainX = trainX.reshape(-1, 28, 28, 1)
+testX = testX.reshape(-1, 28, 28, 1)
+print(trainX.shape)
+print(testX.shape)
+# Convert labels to categorical
+trainY_cat = tf.keras.utils.to_categorical(trainY)
+testY_cat = tf.keras.utils.to_categorical(testY)
+# Normalize the pixel values
+trainX = trainX / 255.0
+testX = testX / 255.0
+
+
+
+
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Conv2D(64, kernel_size=(3, 3), input_shape=(28, 28, 1), activation='relu'),
+    tf.keras.layers.AvgPool2D(pool_size=(2, 2)),
+    tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu'),
+    tf.keras.layers.AvgPool2D(pool_size=(2, 2)),
+    tf.keras.layers.GlobalAveragePooling2D(),
+    tf.keras.layers.Dense(10, activation="softmax")
+])
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+model.summary()
+
+
+history = model.fit(trainX, trainY_cat, epochs=10, batch_size=128, validation_data=(testX, testY_cat))
+
+
+
+
+
+def visualize_random_predictions(model, testX, testY_cat, class_names):
+    random_indices = random.sample(range(len(testX)), 9)
+    
+    fig, axes = plt.subplots(3, 3, figsize=(20, 8))
+    axes = axes.flatten()
+
+    for i, idx in enumerate(random_indices):
+        image = testX[idx]
+        label = testY_cat[idx]
+
+        prediction = model.predict(np.expand_dims(image, axis=0))
+        predicted_label = class_names[np.argmax(prediction)]
+        true_label = class_names[np.argmax(label)]
+
+        axes[i].imshow(image / 255.0)
+        axes[i].set_title(f"True Label: {true_label}, Predicted Label: {predicted_label}")
+        axes[i].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+
+
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+visualize_random_predictions(model, testX, testY_cat, class_names)
+
+
+
+
+
+
+
+
+
+# Model Evaluation
+loss, accuracy = model.evaluate(testX, testY_cat)
+predictions = model.predict(testX)
+predicted_labels = np.argmax(predictions, axis=1)
+true_labels = np.argmax(testY_cat, axis=1)
+classification_report_str = metrics.classification_report(true_labels, predicted_labels)
+confusion_matrix_arr = metrics.confusion_matrix(true_labels, predicted_labels)
+print(f"Accuracy: {accuracy:.4f}")
+print("\nClassification Report:\n", classification_report_str)
+print("\nConfusion Matrix:\n", confusion_matrix_arr)
+
+
+
+
+
+
+plt.plot(history.history['accuracy'], label='accuracy')
+plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(loc='lower right')
+plt.show()
+
+
+
+
+
